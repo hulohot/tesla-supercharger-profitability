@@ -16,6 +16,7 @@ from calculator_enhanced import (
     AnnualOperatingCosts,
     RevenueParameters
 )
+from market_analysis import MarketAnalyzer
 
 # Page configuration
 st.set_page_config(
@@ -236,11 +237,12 @@ calculator = EnhancedSuperchargerCalculator(
 report = calculator.generate_comprehensive_report()
 
 # Main content area
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📊 Overview",
     "💵 Financial Details",
     "📈 Projections",
     "⚡ Usage Analytics",
+    "🗺️ Market Analysis",
     "📄 Export Report"
 ])
 
@@ -604,6 +606,292 @@ with tab4:
         st.metric("Avg Daily Sessions", f"{daily_sessions:.1f}")
 
 with tab5:
+    st.header("US Market Analysis")
+
+    st.markdown("""
+    Analyze charger density vs population to identify **high-opportunity markets**
+    where Supercharger infrastructure is underserved.
+    """)
+
+    # Initialize market analyzer
+    analyzer = MarketAnalyzer()
+    market_data = analyzer.get_market_data()
+    national_stats = analyzer.get_national_stats()
+
+    # National overview
+    st.subheader("📊 National Overview")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric("Cities Analyzed", f"{national_stats['cities_analyzed']}")
+
+    with col2:
+        st.metric("Total Population", f"{national_stats['total_population']:,.0f}")
+
+    with col3:
+        st.metric("Total Chargers", f"{national_stats['total_chargers']}")
+
+    with col4:
+        st.metric("Avg Chargers/100k", f"{national_stats['avg_chargers_per_100k']:.2f}")
+
+    st.markdown("---")
+
+    # Heat maps
+    st.subheader("🗺️ Interactive US Heat Maps")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("**Charger Density**")
+
+        # Charger density map
+        fig_chargers = go.Figure()
+
+        # Add charger locations as bubbles
+        fig_chargers.add_trace(go.Scattergeo(
+            lon=market_data['lon'],
+            lat=market_data['lat'],
+            text=[f"{row['city']}, {row['state']}<br>"
+                  f"Chargers: {row['chargers']}<br>"
+                  f"Per 100k: {row['chargers_per_100k']:.2f}"
+                  for _, row in market_data.iterrows()],
+            mode='markers',
+            marker=dict(
+                size=market_data['chargers'] * 2,
+                color=market_data['chargers'],
+                colorscale='Reds',
+                showscale=True,
+                colorbar=dict(title="Chargers"),
+                line=dict(width=0.5, color='white'),
+                sizemode='diameter'
+            ),
+            hovertemplate='<b>%{text}</b><extra></extra>'
+        ))
+
+        fig_chargers.update_layout(
+            geo=dict(
+                scope='usa',
+                projection_type='albers usa',
+                showland=True,
+                landcolor='rgb(243, 243, 243)',
+                coastlinecolor='rgb(204, 204, 204)',
+                showlakes=True,
+                lakecolor='rgb(230, 245, 255)'
+            ),
+            height=500,
+            margin=dict(l=0, r=0, t=0, b=0)
+        )
+
+        st.plotly_chart(fig_chargers, use_container_width=True)
+
+    with col2:
+        st.markdown("**Population Density**")
+
+        # Population density map
+        fig_population = go.Figure()
+
+        fig_population.add_trace(go.Scattergeo(
+            lon=market_data['lon'],
+            lat=market_data['lat'],
+            text=[f"{row['city']}, {row['state']}<br>"
+                  f"Population: {row['population']:,}<br>"
+                  f"Market Size: {row['market_size_score']:.1f}"
+                  for _, row in market_data.iterrows()],
+            mode='markers',
+            marker=dict(
+                size=market_data['market_size_score'] / 2,
+                color=market_data['population'],
+                colorscale='Blues',
+                showscale=True,
+                colorbar=dict(title="Population"),
+                line=dict(width=0.5, color='white'),
+                sizemode='diameter'
+            ),
+            hovertemplate='<b>%{text}</b><extra></extra>'
+        ))
+
+        fig_population.update_layout(
+            geo=dict(
+                scope='usa',
+                projection_type='albers usa',
+                showland=True,
+                landcolor='rgb(243, 243, 243)',
+                coastlinecolor='rgb(204, 204, 204)',
+                showlakes=True,
+                lakecolor='rgb(230, 245, 255)'
+            ),
+            height=500,
+            margin=dict(l=0, r=0, t=0, b=0)
+        )
+
+        st.plotly_chart(fig_population, use_container_width=True)
+
+    # Gap Analysis Heat Map
+    st.markdown("---")
+    st.subheader("🎯 Market Opportunity Heat Map")
+    st.markdown("**Red = Underserved (High Opportunity) | Green = Oversaturated**")
+
+    fig_gap = go.Figure()
+
+    # Create gap visualization (negative gap = underserved = opportunity)
+    fig_gap.add_trace(go.Scattergeo(
+        lon=market_data['lon'],
+        lat=market_data['lat'],
+        text=[f"{row['city']}, {row['state']}<br>"
+              f"Population: {row['population']:,}<br>"
+              f"Chargers: {row['chargers']}<br>"
+              f"Coverage Gap: {row['coverage_gap']:.2f}<br>"
+              f"Opportunity Score: {row['opportunity_score']:.1f}"
+              for _, row in market_data.iterrows()],
+        mode='markers',
+        marker=dict(
+            size=market_data['opportunity_score'] * 1.5,
+            color=-market_data['coverage_gap'],  # Negative so red = underserved
+            colorscale='RdYlGn_r',  # Reversed so red is high opportunity
+            showscale=True,
+            colorbar=dict(
+                title="Opportunity",
+                ticktext=['Oversaturated', 'Balanced', 'Underserved'],
+                tickvals=[-2, 0, 2]
+            ),
+            line=dict(width=0.5, color='white'),
+            sizemode='diameter',
+            cmin=-3,
+            cmax=3
+        ),
+        hovertemplate='<b>%{text}</b><extra></extra>'
+    ))
+
+    fig_gap.update_layout(
+        geo=dict(
+            scope='usa',
+            projection_type='albers usa',
+            showland=True,
+            landcolor='rgb(243, 243, 243)',
+            coastlinecolor='rgb(204, 204, 204)',
+            showlakes=True,
+            lakecolor='rgb(230, 245, 255)'
+        ),
+        height=600,
+        margin=dict(l=0, r=0, t=0, b=0)
+    )
+
+    st.plotly_chart(fig_gap, use_container_width=True)
+
+    # Top Opportunities
+    st.markdown("---")
+    st.subheader("🏆 Top 10 Market Opportunities")
+    st.markdown("Cities with the highest potential for new Supercharger installations")
+
+    opportunities = analyzer.get_top_opportunities(10)
+
+    # Format the dataframe
+    opportunities_display = opportunities.copy()
+    opportunities_display['Location'] = opportunities_display['city'] + ', ' + opportunities_display['state']
+    opportunities_display['Population'] = opportunities_display['population'].apply(lambda x: f"{x:,}")
+    opportunities_display['Chargers'] = opportunities_display['chargers'].astype(int)
+    opportunities_display['People/Charger'] = opportunities_display['people_per_charger'].apply(lambda x: f"{x:,.0f}")
+    opportunities_display['Per 100k Pop'] = opportunities_display['chargers_per_100k'].apply(lambda x: f"{x:.2f}")
+    opportunities_display['Opportunity Score'] = opportunities_display['opportunity_score'].apply(lambda x: f"{x:.1f}")
+
+    st.dataframe(
+        opportunities_display[['Location', 'Population', 'Chargers', 'People/Charger', 'Per 100k Pop', 'Opportunity Score']],
+        use_container_width=True,
+        hide_index=True
+    )
+
+    # Regional Analysis
+    st.markdown("---")
+    st.subheader("📍 Regional Breakdown")
+
+    regional = analyzer.get_regional_analysis()
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        # Regional bar chart
+        fig_regional = go.Figure()
+
+        fig_regional.add_trace(go.Bar(
+            x=regional.index,
+            y=regional['chargers_per_100k'],
+            marker_color=['#E82127', '#393C41', '#5C6BC0', '#28a745', '#ffc107'],
+            text=regional['chargers_per_100k'].apply(lambda x: f"{x:.2f}"),
+            textposition='auto'
+        ))
+
+        fig_regional.update_layout(
+            title="Chargers per 100k People by Region",
+            xaxis_title="Region",
+            yaxis_title="Chargers per 100k",
+            height=400
+        )
+
+        st.plotly_chart(fig_regional, use_container_width=True)
+
+    with col2:
+        # Regional table
+        st.markdown("**Regional Statistics**")
+
+        regional_display = regional.copy()
+        regional_display['Population'] = regional_display['population'].apply(lambda x: f"{x:,}")
+        regional_display['Cities'] = regional_display['cities'].astype(int)
+        regional_display['Chargers'] = regional_display['chargers'].astype(int)
+        regional_display['Per 100k'] = regional_display['chargers_per_100k'].apply(lambda x: f"{x:.2f}")
+        regional_display['People/Charger'] = regional_display['people_per_charger'].apply(lambda x: f"{x:,.0f}")
+
+        st.dataframe(
+            regional_display[['Cities', 'Population', 'Chargers', 'Per 100k', 'People/Charger']],
+            use_container_width=True
+        )
+
+    # Key Insights
+    st.markdown("---")
+    st.subheader("💡 Key Insights")
+
+    top_opportunity = opportunities.iloc[0]
+    most_saturated = analyzer.get_oversaturated_markets(1).iloc[0]
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.success(f"""
+        **🎯 Best Opportunity: {top_opportunity['city']}, {top_opportunity['state']}**
+
+        - Population: {top_opportunity['population']:,}
+        - Current Chargers: {top_opportunity['chargers']}
+        - People per Charger: {top_opportunity['people_per_charger']:,.0f}
+        - Opportunity Score: {top_opportunity['opportunity_score']:.1f}
+
+        This market is significantly underserved and represents a high-value opportunity
+        for new Supercharger installation.
+        """)
+
+    with col2:
+        st.info(f"""
+        **📊 Most Saturated: {most_saturated['city']}, {most_saturated['state']}**
+
+        - Population: {most_saturated['population']:,}
+        - Current Chargers: {most_saturated['chargers']}
+        - Chargers per 100k: {most_saturated['chargers_per_100k']:.2f}
+
+        This market has high charger density. Consider other locations unless
+        there's specific strategic value.
+        """)
+
+    st.markdown("---")
+    st.markdown("""
+    **How to Use This Analysis:**
+
+    1. **Red bubbles** on the opportunity map indicate underserved markets
+    2. **Larger bubbles** indicate higher opportunity scores (population + low coverage)
+    3. Focus on cities with high population and low chargers per 100k
+    4. Consider regional saturation when planning multi-site deployments
+    5. Combine this data with your financial model to find optimal locations
+    """)
+
+with tab6:
     st.header("Export Report")
 
     st.markdown("Download comprehensive financial analysis")
