@@ -37,6 +37,18 @@ streamlit run app.py
 
 3. **Open your browser** to the URL shown (typically http://localhost:8501)
 
+### 📱 Access from Your Phone
+
+Want to use this calculator from your phone anywhere? Deploy it to the cloud for free!
+
+**See the [DEPLOYMENT.md](DEPLOYMENT.md) guide** for step-by-step instructions on:
+- Deploying to Streamlit Community Cloud (FREE - 5 minutes)
+- Accessing from your phone via web browser
+- Adding to your phone's home screen for app-like experience
+- Other hosting options (Railway, Render, etc.)
+
+**Quick Deploy**: Go to [share.streamlit.io](https://share.streamlit.io), connect this GitHub repo, and deploy `app.py` - done! 🚀
+
 ### Command-Line Interface
 
 #### Basic Calculator
