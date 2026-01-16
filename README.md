@@ -11,6 +11,8 @@ Comprehensive financial analysis tool for determining the profitability of white
 - **Visual Analytics**: Interactive charts and graphs
 - **Multi-Year Projections**: 10-year financial forecasts
 - **Sensitivity Analysis**: Understand key profitability drivers
+- **US Market Analysis**: Interactive heat maps showing charger density vs population
+- **Gap Analysis**: Identify underserved markets with high opportunity scores
 - **Export Reports**: Download detailed analysis as text or CSV
 
 ### Detailed Financial Modeling
